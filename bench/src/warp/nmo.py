@@ -5,6 +5,7 @@ from imports import *
 
 from edu.mines.jtk.dsp.Conv import *
 from warp import WaveletNmo,WarpedWavelet,ShapingFilter
+from data import SUDataGrabber
 
 #############################################################################
 
@@ -15,7 +16,33 @@ def main(args):
   #goCmpGatherWithKnownWavelet()
   #goEstimateWaveletForOneOffset()
   #goEstimateWaveletFromCmpGather()
-  goEstimateWaveletFromOzGather()
+  #goEstimateWaveletFromOzGather()
+  #goEstimateWaveletFromVikingGrabenGather()
+  goEstimateWaveletForOneOffsetVikingGraben()
+
+def goEstimateWaveletFromVikingGrabenGather():
+  """ Estimates wavelet from Viking Graben data """
+  fileLoc = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp=1300.strip"
+  st = Sampling(1500,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
+  sx = Sampling(60,0.0125,3.275); nx,dx,fx = sx.count,sx.delta,sx.first
+  vnmo = 2.0 
+  hp = SUDataGrabber.grab2DFile(fileLoc, nx, nt)
+  na,ka = 11,0 # sampling for inverse wavelet a
+  nh,kh = 201,-50 # sampling for wavelet h
+  wn = WaveletNmo(st,sx,vnmo)
+  a = wn.getInverseA(na,ka,hp) # estimate inverse wavelet
+  h = wn.getWaveletH(na,ka,a,nh,kh); # estimate wavelet
+  g = wn.applyHNmoA(na,ka,a,nh,kh,h,hp)
+  e = wn.applyNmo(hp)
+
+  print "a ="; dump(a);
+  tmin = st.first
+  tmax = st.first+st.count*st.delta
+  perc = 98.0
+  plotGather(st,sx,hp,tmin=tmin,tmax=tmax,perc=perc,title="input gather")
+  plotGather(st,sx,e,tmin=tmin,tmax=tmax,perc=perc,title="conventional NMO")
+  plotGather(st,sx,g,tmin=tmin,tmax=tmax,perc=perc,title="improved NMO")
+  
 
 def goEstimateWaveletFromOzGather():
   """ Estimates wavelet from one of Oz Yilmaz's gathers """
@@ -79,6 +106,71 @@ def goEstimateWaveletFromCmpGather():
     g = wn.applyHNmoA(na,ka,ak,nh,kh,h,f)
     plotGather(st,sx,g,"NMO with "+title)
 
+def goEstimateWaveletForOneOffsetVikingGraben():
+  """ Estimates wavelet from a non-zero-offset and zero-offset trace """
+  fileLoc = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp=1300.strip"
+  st = Sampling(1500,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
+  sx = Sampling(60,0.049,.262); nx,dx,fx = sx.count,sx.delta,sx.first
+  vnmo = 2.0 # NMO velocity
+  freq,decay = 30.0,0.1 # peak frequency and decay for wavelet
+
+
+  ixx,ixy = 59,0 # indices for non-zero-offset and zero-offset traces
+  offset = sx.getValue(ixx) # the non-zero offset
+
+  hp = SUDataGrabber.grab2DFile(fileLoc, nx, nt)
+  axx = zerofloat(nt)
+  shp = applyNmo(vnmo,st,sx,hp)
+
+  x,y = hp[ixx],hp[ixy] # x is non-zero-offset trace; y is zero-offset trace
+  na,ka = 11,-5 # number of samples and index of 1st sample for inverse
+  ak = zerofloat(na) # array for the known inverse wavelet a
+  r,w = exp(-decay),2.0*PI*freq*st.delta # radius and frequency of poles
+  a1,a2 = -2.0*r*cos(w),r*r # coefficients for inverse wavelet
+  ak[0-ka] = 1.0
+  ak[1-ka] = a1
+  ak[2-ka] = a2
+  ww = WarpedWavelet(WarpedWavelet.Nmo(st,offset,vnmo))
+  ae = ww.estimateInverse(na,ka,x,y) # the estimated wavelet inverse
+  tmin = st.first
+  tmax = st.first+st.count*st.delta
+  perc = 98.0
+  for a in [ak,ae]:
+    print 'ak = '+ str(ak)
+    print 'ae = '+ str(ae)
+    if a is ak:
+      title = "known wavelet"
+    else:
+      title = "estim. wavelet"
+    print title
+    ax = zerofloat(nt)
+    ay = zerofloat(nt)
+    conv(na,ka,a,nt,0,x,nt,0,ax)
+    conv(na,ka,a,nt,0,y,nt,0,ay)
+    sax = applyNmo1(offset,vnmo,st,ax)
+    rms = sqrt(sum(pow(sub(ay,sax),2))/nt)
+    print "a = ",; dump(a)
+    print "rms error =",rms
+    nh,kh = 100,-20 # number of samples, index of 1st sample for wavelet h
+    h = ww.estimateWavelet(na,ka,a,nh,kh);
+    wn = WaveletNmo(st,sx,vnmo)
+    g = wn.applyHNmoA(na,ka,a,nh,kh,h,hp)
+    plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),title=title)
+    plotGather(st,sx,g,tmin=tmin,tmax=tmax,perc=perc,title=title+" improved nmo, "+str(ixy) + ","+ str(ixx))
+
+
+   
+  #hsax = zerofloat(nt)
+  #conv(nh,kh,h,nt,0,sax,nt,0,hsax)
+  #sx = applyNmo1(offset,vnmo,st,x)
+  #plotSequence(st,x,3.0,"x")
+  #plotSequence(st,sx,3.0,"sx")
+  #plotSequence(st,hsax,3.0,"hsax")
+  #plotSequence(st,y,3.0,"y")
+  plotGather(st,sx,hp,tmin=tmin,tmax=tmax,perc=perc,title="input gather")
+  plotGather(st,sx,shp,tmin=tmin,tmax=tmax,perc=perc,title="conventional nmo")
+  #plotGather(st,sx,e,tmin=tmin,tmax=tmax,perc=perc,title="conventional NMO")
+  #plotGather(st,sx,g,tmin=tmin,tmax=tmax,perc=perc,title="improved NMO")
 def goEstimateWaveletForOneOffset():
   """ Estimates wavelet from a non-zero-offset and zero-offset trace """
   st = Sampling(501,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
@@ -87,7 +179,7 @@ def goEstimateWaveletForOneOffset():
   freq,decay = 30.0,0.1 # peak frequency and decay for wavelet
   p = makeCmpReflections(vnmo,nref,st,sx) # cmp gather without wavelet
   hp = addArWavelet(freq,decay,st,sx,p) # cmp gather with wavelet
-  ixx,ixy = 100,0 # indices for non-zero-offset and zero-offset traces
+  ixx,ixy = 1,0 # indices for non-zero-offset and zero-offset traces
   offset = sx.getValue(ixx) # the non-zero offset
   x,y = hp[ixx],hp[ixy] # x is non-zero-offset trace; y is zero-offset trace
   na,ka = 11,-5 # number of samples and index of 1st sample for inverse

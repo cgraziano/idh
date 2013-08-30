@@ -29,14 +29,15 @@ public class SUDataGrabber {
 	 *            The number of samples in the fast dimension of the data.
 	 * @return The 2D data in a 2D array of floats.
 	 */
-	public static float[][] grab2DSuFile(String fileLoc, int n2, int n1) {
+	public static float[][] grab2DFile(String fileLoc, int n2, int n1) {
 		float[][] data = new float[n2][n1];
-    File file = new File("fileLoc");
+		float[][] temp = new float[n2][n1];
+    File file = new File(fileLoc);
     String fileName = file.getPath();
 
 		try {
-			ArrayFile af = new ArrayFile(fileName, "r", ByteOrder.BIG_ENDIAN,
-					ByteOrder.LITTLE_ENDIAN);
+			ArrayFile af = new ArrayFile(fileName, "r", ByteOrder.LITTLE_ENDIAN,
+					ByteOrder.BIG_ENDIAN);
 			af.readFloats(data);
 
 			System.out.println("Data extracted from " + fileName);
@@ -47,6 +48,13 @@ public class SUDataGrabber {
 			System.out.println("File Cannot be found!");
 			throw new RuntimeException(e);
 		}
+    //flip the su data, so the zero offset trace is on the left side.
+    for (int i=0; i<n2; ++i) {
+      temp[i] =  data[n2-1-i];
+    }
+    for (int i=0; i<n2; ++i) {
+      data[i] =  temp[i];
+    }
 
 		return data;
 	}
