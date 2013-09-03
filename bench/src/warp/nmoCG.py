@@ -20,148 +20,80 @@ def main(args):
   #goEstimateWaveletFromVikingGraben()
   #goEstimateWaveletForOneOffsetVikingGraben()
 
-  
-
-def goEstimateWaveletFromOzGather():
-  """ Estimates wavelet from one of Oz Yilmaz's gathers """
-  name = "oz30"
-  if name is "oz16":
-    st = Sampling(1325,0.004,0.004); nt,dt,ft = st.count,st.delta,st.first
-    sx = Sampling(  48,0.025,0.233); nx,dx,fx = sx.count,sx.delta,sx.first
-    vnmo = 1.90 # NMO velocity
-  elif name is "oz30":
-    st = Sampling(2175,0.004,0.00400); nt,dt,ft = st.count,st.delta,st.first
-    sx = Sampling(  96,0.025,0.23075); nx,dx,fx = sx.count,sx.delta,sx.first
-    vnmo = 1.60 # NMO velocity
-  f = zerofloat(nt,nx)
-  ais = ArrayInputStream("/data/seis/oz/"+name+".F")
-  ais.readFloats(f)
-  ais.close()
-  f = tpow(3.0,st,f)
-  na,ka = 11,0 # sampling for inverse wavelet a
-  nh,kh = 201,-50 # sampling for wavelet h
-  wn = WaveletNmo(st,sx,vnmo)
-  a = wn.getInverseA(na,ka,f) # estimate inverse wavelet
-  for i in range(0,na):
-    print a[i]
-  
-  h = wn.getWaveletH(na,ka,a,nh,kh); # estimate wavelet
-  g = wn.applyHNmoA(na,ka,a,nh,kh,h,f)
-  e = wn.applyNmo(f)
-  print "a ="; dump(a);
-  tmin,tmax,perc = 2.5,3.0,98.0
-  plotGather(st,sx,f,tmin=tmin,tmax=tmax,perc=perc,title="input gather")
-  plotGather(st,sx,e,tmin=tmin,tmax=tmax,perc=perc,title="conventional NMO")
-  plotGather(st,sx,g,tmin=tmin,tmax=tmax,perc=perc,title="improved NMO")
-  #plotSequence(Sampling(na,st.delta,ka*st.delta),normalize(a),title="inverse")
-  plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),
-               title="estimated wavelet")
-
-def goEstimateWaveletFromCmpGather():
-  """ Estimates wavelet from a CMP gather """
-  st = Sampling(501,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
-  sx = Sampling(201,0.010,0.0); nx,dx,fx = sx.count,sx.delta,sx.first
-  nref,vnmo = 100,2.0 # number of reflectors and NMO velocity
-  freq,decay = 30.0,0.1 # peak frequency and decay for wavelet
-  p = makeCmpReflections(vnmo,nref,st,sx) # cmp gather without wavelet
-  f = addArWavelet(freq,decay,st,sx,p) # cmp gather with wavelet
-  plotGather(st,sx,f,"CMP gather")
-  na,ka = 11,-5 # sampling for inverse wavelet a
-  ak = zerofloat(na) # array for the known inverse wavelet a
-  r,w = exp(-decay),2.0*PI*freq*st.delta # radius and frequency of poles
-  a1,a2 = -2.0*r*cos(w),r*r # coefficients for inverse wavelet
-  ak[0-ka] = 1.0
-  ak[1-ka] = a1
-  ak[2-ka] = a2
-  wn = WaveletNmo(st,sx,vnmo)
-  ae = wn.getInverseA(na,ka,f) # the estimated inverse wavelet
-  nh,kh = 100,-20 # sampling for wavelet h
-  for a in [ak,ae]:
-    if a is ak:
-      title = "known wavelet"
-    else:
-      title = "estimated wavelet"
-    print title
-    h = wn.getWaveletH(na,ka,a,nh,kh);
-    plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),title=title)
-    g = wn.applyHNmoA(na,ka,ak,nh,kh,h,f)
-    plotGather(st,sx,g,"NMO with "+title)
-
-
-
 def goEstimateWaveletFromVikingGraben():
   fileLoc = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp=1300.strip"
   st = Sampling(1500,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
   sx = Sampling(60,0.049,.262); nx,dx,fx = sx.count,sx.delta,sx.first
-  vnmo = 2.0
   hp = SUDataGrabber.grab2DFile(fileLoc, nx, nt)
   """ Estimates wavelet from one of Oz Yilmaz's gathers """
   f = zerofloat(nt,nx)
   f = tpow(3.0,st,f)
+  vnmo = 2.0
   na,ka = 11,0 # sampling for inverse wavelet a
   nh,kh = 201,-50 # sampling for wavelet h
   wn = WaveletNmo(st,sx,vnmo)
   a = wn.getInverseA(na,ka,hp) # estimate inverse wavelet
-  for i in range(0,na):
-    print a[i]
-  
-  h = wn.getWaveletH(na,ka,a,nh,kh); # estimate wavelet
-  g = wn.applyHNmoA(na,ka,a,nh,kh,h,f)
-  e = wn.applyNmo(f)
   print "a ="; dump(a);
-  tmin,tmax,perc = 2.5,3.0,98.0
+  h = wn.getWaveletH(na,ka,a,nh,kh); # estimate wavelet
+  g = wn.applyHNmoA(na,ka,a,nh,kh,h,hp)
+  e = wn.applyNmo(hp)
+  tmin,tmax,perc = 0.0,6.0,98.0
   plotGather(st,sx,hp,tmin=tmin,tmax=tmax,perc=perc,title="input gather")
   plotGather(st,sx,e,tmin=tmin,tmax=tmax,perc=perc,title="conventional NMO")
   plotGather(st,sx,g,tmin=tmin,tmax=tmax,perc=perc,title="improved NMO")
   #plotSequence(Sampling(na,st.delta,ka*st.delta),normalize(a),title="inverse")
-  plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),
-               title="estimated wavelet")
+ # plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),
+               #title="estimated wavelet")
 
 def goEstimateWaveletForOneOffset():
   """ Estimates wavelet from a non-zero-offset and zero-offset trace """
-  st = Sampling(501,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
-  sx = Sampling(201,0.010,0.0); nx,dx,fx = sx.count,sx.delta,sx.first
-  nref,vnmo = 100,2.0 # number of reflectors and NMO velocity
-  freq,decay = 30.0,0.1 # peak frequency and decay for wavelet
-  p = makeCmpReflections(vnmo,nref,st,sx) # cmp gather without wavelet
-  hp = addArWavelet(freq,decay,st,sx,p) # cmp gather with wavelet
+  fileLoc = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp=1300.strip"
+  st = Sampling(1500,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
+  sx = Sampling(60,0.049,.262); nx,dx,fx = sx.count,sx.delta,sx.first
+  hp = SUDataGrabber.grab2DFile(fileLoc, nx, nt)
+  hp = tpow(3.0,st,hp)
+  vnmo = 2.0 # NMO velocity
   ixx,ixy = 1,0 # indices for non-zero-offset and zero-offset traces
   offset = sx.getValue(ixx) # the non-zero offset
   x,y = hp[ixx],hp[ixy] # x is non-zero-offset trace; y is zero-offset trace
-  na,ka = 11,-5 # number of samples and index of 1st sample for inverse
-  ak = zerofloat(na) # array for the known inverse wavelet a
-  r,w = exp(-decay),2.0*PI*freq*st.delta # radius and frequency of poles
-  a1,a2 = -2.0*r*cos(w),r*r # coefficients for inverse wavelet
-  ak[0-ka] = 1.0
-  ak[1-ka] = a1
-  ak[2-ka] = a2
+  na,ka = 11,0 # number of samples and index of 1st sample for inverse
+  nh,kh = 201,-50 # sampling for wavelet h
   ww = WarpedWavelet(WarpedWavelet.Nmo(st,offset,vnmo))
   ae = ww.estimateInverse(na,ka,x,y) # the estimated wavelet inverse
-  for a in [ak,ae]:
-    if a is ak:
-      title = "known wavelet"
-    else:
-      title = "estimated wavelet"
-    print title
-    ax = zerofloat(nt)
-    ay = zerofloat(nt)
-    conv(na,ka,a,nt,0,x,nt,0,ax)
-    conv(na,ka,a,nt,0,y,nt,0,ay)
-    sax = applyNmo1(offset,vnmo,st,ax)
-    rms = sqrt(sum(pow(sub(ay,sax),2))/nt)
-    print "a = ",; dump(a)
-    print "rms error =",rms
-    nh,kh = 100,-20 # number of samples, index of 1st sample for wavelet h
-    h = ww.estimateWavelet(na,ka,a,nh,kh);
-    plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),title=title)
+  print "a = ",; dump(ae)
+  h = ww.estimateWavelet(na,ka,ae,nh,kh); # estimate wavelet
+  wn = WaveletNmo(st,sx,vnmo)
+  g = wn.applyHNmoA(na,ka,ae,nh,kh,h,hp)
+  e = wn.applyNmo(hp)
+  tmin,tmax,perc = 0.0,6.0,98.0
+  plotGather(st,sx,hp,tmin=tmin,tmax=tmax,perc=perc,title="input gather")
+  plotGather(st,sx,e,tmin=tmin,tmax=tmax,perc=perc,title="conventional NMO")
+  plotGather(st,sx,g,tmin=tmin,tmax=tmax,perc=perc,title="improved NMO")
+  #for a in [ak,ae]:
+  #  if a is ak:
+  #    title = "known wavelet"
+  #  else:
+  #    title = "estimated wavelet"
+  #  print title
+  #  ax = zerofloat(nt)
+  #  ay = zerofloat(nt)
+  #  conv(na,ka,a,nt,0,x,nt,0,ax)
+  #  conv(na,ka,a,nt,0,y,nt,0,ay)
+  #  sax = applyNmo1(offset,vnmo,st,ax)
+  #  rms = sqrt(sum(pow(sub(ay,sax),2))/nt)
+  #  print "a = ",; dump(a)
+  #  print "rms error =",rms
+  #  nh,kh = 100,-20 # number of samples, index of 1st sample for wavelet h
+  #  h = ww.estimateWavelet(na,ka,a,nh,kh);
+  #  plotSequence(Sampling(nh,st.delta,kh*st.delta),normalize(h),title=title)
   #return
-  hsax = zerofloat(nt)
-  conv(nh,kh,h,nt,0,sax,nt,0,hsax)
-  sx = applyNmo1(offset,vnmo,st,x)
-  plotSequence(st,x,3.0,"x")
-  plotSequence(st,sx,3.0,"sx")
-  plotSequence(st,hsax,3.0,"hsax")
-  plotSequence(st,y,3.0,"y")
+  #hsax = zerofloat(nt)
+  #conv(nh,kh,h,nt,0,sax,nt,0,hsax)
+  #sx = applyNmo1(offset,vnmo,st,x)
+  #plotSequence(st,x,3.0,"x")
+  #plotSequence(st,sx,3.0,"sx")
+  #plotSequence(st,hsax,3.0,"hsax")
+  #plotSequence(st,y,3.0,"y")
 
 def goCmpGatherWithKnownWavelet():
   n = 501
