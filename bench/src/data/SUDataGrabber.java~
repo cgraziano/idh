@@ -90,12 +90,12 @@ public class SUDataGrabber {
 			throw new RuntimeException(e);
 		}
     //flip the su data, so the zero offset trace is on the left side.
-    for (int i=0; i<n2; ++i) {
-      temp[i] =  data[n2-1-i];
-    }
-    for (int i=0; i<n2; ++i) {
-      data[i] =  temp[i];
-    }
+    //for (int i=0; i<n2; ++i) {
+    //  temp[i] =  data[n2-1-i];
+    //}
+    //for (int i=0; i<n2; ++i) {
+    //  data[i] =  temp[i];
+    //}
 
 		return data;
 	}

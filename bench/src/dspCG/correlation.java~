@@ -1,0 +1,42 @@
+package dspCG;
+
+/**
+ * Computes the correlation function between two functions
+ *
+ * @author Chris Graziano
+ */
+public class Correlator {
+  /**
+   * Constructs a correlator to create the correlation function
+   * @param float[] f input signal, sliding signal
+   * @param float[] g input signal, stationary signal 
+   * @return float[] of the correlation function
+   */
+  public Correlator(float[] f, float[] g) {
+    nf = f.length;
+    ng = g.length;
+    this.f = f;
+    this.g = f;
+    nlag = ng+nf;
+    cor = new float[nlag];//the correlation function
+
+  }
+  public float[] correlate() {
+    for (int lag=0; lag<nlag; ++lag) {
+      for (int i=0; i<lag; ++i){
+        cor[lag] += f[nf-1-i]*g[i]; 
+      }
+    } 
+    //cor[0] = f[nf-1-0]*g[0];
+    //cor[1] = f[nf-1-1]*g[0] + f[nf-1]*g[1];
+    //cor[2] = f[nf-1-2]*g[0] + f[nf-1-1]*g[1] + f[nf-1]*g[2];
+
+    return cor;
+
+  }
+  private int nlag,nf,ng;
+  private float[] cor,f,g;
+
+
+}
+
