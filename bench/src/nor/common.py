@@ -1,6 +1,3 @@
-"""
-Common imports
-"""
 import sys
 
 from java.awt import *
@@ -20,5 +17,14 @@ from edu.mines.jtk.sgl import *
 from edu.mines.jtk.util import *
 from edu.mines.jtk.util.ArrayMath import *
 
-from segy import *
-from csm import *
+#############################################################################
+# Run the function main on the Swing thread
+import sys
+class _RunMain(Runnable):
+  def __init__(self,main):
+    self.main = main
+  def run(self):
+    self.main(sys.argv)
+def run(main):
+  SwingUtilities.invokeLater(_RunMain(main)) 
+
